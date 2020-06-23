@@ -12,17 +12,24 @@ def mm(s):
 def point3d(x, y, z=0):
     return adsk.core.Point3D.create(mm(x), mm(y), mm(z))
 
-def add_polygon(lines, points: List[tuple]):
-    points = [ point3d(x, y) for x, y in points ]
+def add_polygon_by_points(lines, points: List[adsk.core.Point3D]):
     l = len(points)
     for i in range(l):
         lines.addByTwoPoints(points[i], points[(i + 1) % l])
+
+def add_polygon(lines, points: List[tuple]):
+    add_polygon_by_points(lines, [ point3d(x, y) for x, y in points ])
 
 def find_item_by_name(collection, name):
     for i in range(collection.count):
         if collection.item(i).name == name:
             return name
     return None
+
+def copy_point_offset(point, x=0, y=0, z=0):
+    copied = point.copy()
+    copied.translateBy(adsk.core.Vector3D.create(mm(x), mm(y), mm(z)))
+    return copied
 
 def find_point(sketch, cx, cy):
     for point in sketch.sketchPoints:
@@ -81,8 +88,9 @@ def main(app: adsk.core.Application):
         panel_top_ext.name = 'panel_top_ext'
         panel = panel_top_ext.bodies.item(0)
         panel.name = 'panel'
+    else:
+        panel_top_ext = extrudes.itemByName('panel_top_ext')
 
-    panel_top_ext = extrudes.itemByName('panel_top_ext')
     top_face = panel_top_ext.startFaces.item(0)
     
     # create single 2u panel for testing #2
@@ -168,26 +176,71 @@ def main(app: adsk.core.Application):
         plate_sketch = sketches.add(plate_plane)
         plate_sketch.projectCutEdges(panel)
         plate_sketch.name = 'plate'
-        outer_profile = plate_sketch.profiles.item(0)
-        for loop in outer_profile.profileLoops:
-            if loop.isOuter:
-                for curve in loop.profileCurves:
-                    curve.sketchEntity.deleteMe()
-        prof = plate_sketch.profiles.item(0)
+        [ wall_outer_prof, wall_inner_prof ] = sorted(plate_sketch.profiles, key=lambda p: p.areaProperties().area)
+        wall_outer_prof= plate_sketch.profiles.item(0)
         curves = adsk.core.ObjectCollection.create()
-        for pc in prof.profileLoops.item(0).profileCurves:
+        for pc in wall_inner_prof.profileLoops.item(0).profileCurves:
             curves.add(pc.sketchEntity)
         plate_sketch.offset(curves, point3d(0, 0, 0), mm(1))
 
+    [ wall_inner_prof, wall_outer_prof, plate_prof ] = sorted(plate_sketch.profiles, key=lambda p: p.areaProperties().area)
+
     plate = bodies.itemByName('plate')
     if not plate:
-        prof = plate_sketch.profiles.item(1)
         dist = adsk.core.ValueInput.createByReal(mm(2))
-        plate_ext = extrudes.addSimple(prof, dist, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        plate_ext = extrudes.addSimple(plate_prof, dist, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
         plate_ext.name = 'plate_ext'
         plate = plate_ext.bodies.item(0)
         plate.name = 'plate'
+    else:
+        plate_ext = extrudes.itemByName('plate_ext')
 
+
+    # min_point = plate_prof.boundingBox.minPoint
+    # max_point = plate_prof.boundingBox.maxPoint
+    # ui.messageBox(f"{min_point.x} {min_point.y} {min_point.z}")
+    # ui.messageBox(f"{max_point.x} {max_point.y} {max_point.z}")
+
+    holder_sketch = sketches.itemByName('holder')
+    if not holder_sketch:
+        holder_sketch = sketches.add(plate_ext.endFaces.item(0))
+        lines = holder_sketch.sketchCurves.sketchLines
+        pro_micro_left_nub_p1 = adsk.core.Point3D.create(
+            plate_prof.boundingBox.minPoint.x + mm(30),
+            plate_prof.boundingBox.maxPoint.y,
+            0,
+        )
+        pro_micro_left_nub_p2 = copy_point_offset(pro_micro_left_nub_p1, x=3, y=-3)
+        lines.addTwoPointRectangle(pro_micro_left_nub_p1, pro_micro_left_nub_p2)
+        pro_micro_right_nub_p1 = copy_point_offset(pro_micro_left_nub_p1, x=18.4 + 3)
+        pro_micro_right_nub_p2 = copy_point_offset(pro_micro_right_nub_p1, x=3, y=-3)
+        lines.addTwoPointRectangle(pro_micro_right_nub_p1, pro_micro_right_nub_p2)
+        # TODO: cut the wall if its thinckness greater than 2
+        breakout_margin = cm(wall_outer_prof.boundingBox.maxPoint.y - plate_prof.boundingBox.maxPoint.y) - 2
+        pro_micro_vd = 34 - breakout_margin
+        pro_micro_tail_points = [
+            copy_point_offset(pro_micro_left_nub_p1, x=0, y=-pro_micro_vd + 5),  # top left corner
+            copy_point_offset(pro_micro_left_nub_p1, x=3, y=-pro_micro_vd + 5),
+            copy_point_offset(pro_micro_left_nub_p1, x=3, y=-pro_micro_vd),
+            copy_point_offset(pro_micro_right_nub_p1, x=0, y=-pro_micro_vd),
+            copy_point_offset(pro_micro_right_nub_p1, x=0, y=-pro_micro_vd + 5),
+            copy_point_offset(pro_micro_right_nub_p1, x=3, y=-pro_micro_vd + 5),
+            copy_point_offset(pro_micro_right_nub_p1, x=3, y=-pro_micro_vd - 5),
+            copy_point_offset(pro_micro_left_nub_p1, x=0, y=-pro_micro_vd - 5),  # bottom left corner
+        ]
+        add_polygon_by_points(lines, pro_micro_tail_points)
+        trrs_w, trrs_h = 6.4, 12
+        trrs_vd = trrs_h - breakout_margin
+        trrs_p0 = copy_point_offset(pro_micro_right_nub_p1, x=20, y=0)  # top left corner
+        trrs_p1 = copy_point_offset(trrs_p0, x=3)
+        trrs_p2 = copy_point_offset(trrs_p1, y=-trrs_vd)
+        trrs_p3 = copy_point_offset(trrs_p2, x=trrs_w)
+        trrs_p4 = copy_point_offset(trrs_p1, x=trrs_w)
+        trrs_p5 = copy_point_offset(trrs_p4, x=3)
+        trrs_p6 = copy_point_offset(trrs_p5, y=-trrs_h-5)
+        trrs_p7 = copy_point_offset(trrs_p0, y=-trrs_h-5)
+        add_polygon_by_points(lines, [trrs_p0, trrs_p1, trrs_p2, trrs_p3, trrs_p4, trrs_p5, trrs_p6, trrs_p7])
+        holder_sketch.name = 'holder'
 
     # create single 2u panel for testing #2
     # lines.addTwoPointRectangle(point3d(-18, 7.5), point3d(18, -10.5))
