@@ -8,7 +8,7 @@ def run(context):
     try:
         app = adsk.core.Application.get()
         ui = app.userInterface
-        from .generator import main
+        from .main import main
         main(app)
     except:
         if ui:
