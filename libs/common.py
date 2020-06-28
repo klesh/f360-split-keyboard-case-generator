@@ -48,6 +48,14 @@ class Box:
     def h(self) -> float:
         return abs(self.p1.y - self.p2.y)
 
+    @property
+    def tr(self) -> Point:
+        return Point(self.p2.x, self.p1.y)
+
+    @property
+    def br(self) -> Point:
+        return self.p2
+
     def translate(self, v: Vector):
         return Box(self.p1.translate(v), self.p2.translate(v))
 
@@ -66,11 +74,11 @@ class Polygon:
     points: List[Point]
     box: Box
 
-    def __init__(self, points: List[Point], box: Box=None):
+    def __init__(self, points: List[Point], box: Box = None):
         self.points = points
         self.box = box
         if not box:
-            x1, y1, x2, y2 = float('inf'), float('-inf'), float('-inf'), float('inf')
+            x1, y1, x2, y2 = float("inf"), float("-inf"), float("-inf"), float("inf")
             for p in points:
                 x1 = p.x if p.x < x1 else x1
                 x2 = p.x if p.x > x2 else x2
@@ -103,15 +111,22 @@ class Key:
 class Layout:
     keys: List[Key] = field(repr=False)
     box: Box
+    splitter: List[Point]
     name: str = None
     author: str = None
 
     def translate(self, v: Vector):
-        return Layout([k.translate(v) for k in self.keys], self.box.translate(v), self.name, self.author)
+        return Layout(
+            keys=[k.translate(v) for k in self.keys],
+            box=self.box.translate(v),
+            splitter=[p.translate(v) for p in self.splitter],
+            name=self.name,
+            author=self.author,
+        )
 
 
 def rxry_to_xyxy(rx, ry, w, h):
-    return rx - w / 2, ry + h / 2,  rx + w / 2, ry - h / 2
+    return rx - w / 2, ry + h / 2, rx + w / 2, ry - h / 2
 
 
 def fold_points_y(points: List[Point]):

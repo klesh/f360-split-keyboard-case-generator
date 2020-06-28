@@ -2,7 +2,8 @@ from libs import kle, promicro
 
 
 if __name__ == '__main__':
-    # layout = kle.from_file(r"C:\Users\Klesh\Desktop\ks63\ks-63.json")
+    layout = kle.from_file(r"C:\Users\Klesh\Desktop\ks63\ks-63.json")
+    print(layout)
     # for key in layout.keys:
     #     print(key)
     # print(layout)
@@ -12,4 +13,4 @@ if __name__ == '__main__':
 
     # print(kle.hole_1u.points)
     # print(kle.hole_1u.box)
-    print(promicro.get_promicro_box())
+    # print(promicro.get_promicro_box())

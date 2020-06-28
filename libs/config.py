@@ -32,4 +32,11 @@ USB_W = 8.1*MM
 TRRS_H = 10*MM
 TRRS_W = 6.4*MM
 TRRS_L = 2*MM
-TRRS_T = 6*MM
+TRRS_RADIUS = 3*MM
+SPLIT_KEYS = [
+    (1, 7),
+    (2, 6),
+    (3, 6),
+    (4, 6),
+]
+SPLIT_GAP = 1*MM

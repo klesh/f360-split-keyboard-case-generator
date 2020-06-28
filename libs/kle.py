@@ -48,17 +48,17 @@ hole_2u = Polygon(
 
 
 def from_json(data: dict) -> Layout:
-
     # calculate in screen coordinate
     keys = []
-    y = 0
+    y, rn = 0, 1
     u = {}
     meta = {}
+    splitter = []
     for row in data:
         if isinstance(row, dict):
             meta = row
             continue
-        x = 0
+        x, cn = 0, 1
         for key in row:
             if isinstance(key, dict):
                 u = key
@@ -74,9 +74,24 @@ def from_json(data: dict) -> Layout:
             keys.append(k)
             u = {}
             x += w
+            if (rn, cn) in SPLIT_KEYS:
+                print(f"row: {rn}, col: {cn}, {repr(key)}")
+                splitter.append(box.tr)
+                splitter.append(box.br)
+            cn += 1
         y -= h
+        rn += 1
     box = Box(Point(0, 0), Point(x, y)).offset(3*MM)
-    return Layout(keys, box, meta.get('name'), meta.get('author')).translate(Vector(- x / 2, - y / 2))
+    if splitter:
+        splitter[0] = Point(splitter[0].x, box.p1.y) 
+        splitter[-1] = Point(splitter[-1].x, box.p2.y)
+    return Layout(
+        keys=keys,
+        box=box,
+        splitter=splitter,
+        name=meta.get('name'),
+        author=meta.get('author')
+    ).translate(Vector(- x / 2, - y / 2))
 
 
 def from_file(file_path: str) -> Layout:
