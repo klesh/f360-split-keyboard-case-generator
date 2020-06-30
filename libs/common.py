@@ -56,6 +56,14 @@ class Box:
     def br(self) -> Point:
         return self.p2
 
+    @property
+    def tl(self) -> Point:
+        return self.p1
+
+    @property
+    def bl(self) -> Point:
+        return Point(self.p1.x, self.p2.y)
+
     def translate(self, v: Vector):
         return Box(self.p1.translate(v), self.p2.translate(v))
 
@@ -111,7 +119,8 @@ class Key:
 class Layout:
     keys: List[Key] = field(repr=False)
     box: Box
-    splitter: List[Point]
+    left: Polygon
+    right: Polygon
     name: str = None
     author: str = None
 
@@ -119,7 +128,8 @@ class Layout:
         return Layout(
             keys=[k.translate(v) for k in self.keys],
             box=self.box.translate(v),
-            splitter=[p.translate(v) for p in self.splitter],
+            left=self.left.translate(v),
+            right=self.right.translate(v),
             name=self.name,
             author=self.author,
         )
@@ -132,3 +142,21 @@ def rxry_to_xyxy(rx, ry, w, h):
 def fold_points_y(points: List[Point]):
     return points + [p.mirror_y() for p in reversed(points)]
 
+def find(function, iterable):
+    for i in iterable:
+        if function(i):
+            return i
+
+def offset_points(points, dx):
+    result = [points[0].translate(Vector(dx=dx))]
+    for i in range(0, len(points) - 2, 2):
+        p1, p2, p3 = points[i:i+3]
+        dy = 0
+        if p1.x == p2.x:
+            dy=-dx if (p3.x - p2.x) < 0 else dx
+        v = Vector(dx, dy)
+        result.append(p2.translate(v))
+        result.append(p3.translate(v))
+    if len(points) % 2 == 0:
+        result.append(points[-1].translate(Vector(dx=dx)))
+    return result

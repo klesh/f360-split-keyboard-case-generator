@@ -75,7 +75,6 @@ def from_json(data: dict) -> Layout:
             u = {}
             x += w
             if (rn, cn) in SPLIT_KEYS:
-                print(f"row: {rn}, col: {cn}, {repr(key)}")
                 splitter.append(box.tr)
                 splitter.append(box.br)
             cn += 1
@@ -85,10 +84,14 @@ def from_json(data: dict) -> Layout:
     if splitter:
         splitter[0] = Point(splitter[0].x, box.p1.y) 
         splitter[-1] = Point(splitter[-1].x, box.p2.y)
+    dx = SPLIT_GAP / 2
+    l = Polygon([box.tl, *offset_points(splitter, -dx), box.bl])
+    r = Polygon([box.tr, *offset_points(splitter, +dx), box.br])
     return Layout(
         keys=keys,
         box=box,
-        splitter=splitter,
+        left=l,
+        right=r,
         name=meta.get('name'),
         author=meta.get('author')
     ).translate(Vector(- x / 2, - y / 2))
