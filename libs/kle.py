@@ -63,7 +63,9 @@ def from_json(data: dict) -> Layout:
             if isinstance(key, dict):
                 u = key
                 continue
-            uw, uh = u.get('w', 1), u.get('h', 1)
+            uw, uh, ux, uy = u.get('w', 1), u.get('h', 1), u.get('ux', 0), u.get('uy', 0)
+            if ux:
+                x += x * U
             w, h = uw * U, uh * U
             box = Box(Point(x, y), Point(x + w, y - h))
             k = Key(

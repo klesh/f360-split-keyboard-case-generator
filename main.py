@@ -6,42 +6,25 @@ from .libs import kle, promicro, trrs
 from .helper import *
 
 
-def main(app: adsk.core.Application):
+def main(app: c.Application):
 
     ui = app.userInterface
-    # doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
-    root: adsk.fusion.Component = app.activeProduct.rootComponent
-    bodies: adsk.fusion.BRepBodies = root.bRepBodies
-    sketches: adsk.fusion.Sketches = root.sketches
-    extrudes: adsk.fusion.ExtrudeFeatures = root.features.extrudeFeatures
-    fillets: adsk.fusion.FilletFeatures = root.features.filletFeatures
-    planes: adsk.fusion.ConstructionPlanes = root.constructionPlanes
-    combines: adsk.fusion.CombineFeatures = root.features.combineFeatures
+    root: f.Component = app.activeProduct.rootComponent
+    bodies: f.BRepBodies = root.bRepBodies
+    sketches: f.Sketches = root.sketches
+    extrudes: f.ExtrudeFeatures = root.features.extrudeFeatures
+    fillets: f.FilletFeatures = root.features.filletFeatures
+    planes: f.ConstructionPlanes = root.constructionPlanes
+    combines: f.CombineFeatures = root.features.combineFeatures
 
-    # fileDlg = ui.createFileDialog()
-    # fileDlg.isMultiSelectEnabled = False
-    # fileDlg.title = "Keyboard Layout Editor  JSON file"
-    # fileDlg.filter = "*.json"
-    # dlgResult = fileDlg.showOpen()
-    # if dlgResult != adsk.core.DialogResults.DialogOK:
-    #     return
-    # KLE.from_file(fileDlg.filename)
-    layout = kle.from_file(r"C:\Users\Klesh\Desktop\ks63\ks-63.json")
-    logger = open(path.join(path.dirname(__file__), 'debug.log'), 'w')
-    def formatPoint(p):
-        return f"({p.x} {p.y} {p.z})"
-    def formatBox(box):
-        return f"Box(max={formatPoint(box.maxPoint)}, min={formatPoint(box.minPoint)})"
-    def formatCircle(circle):
-        return f"Circle(center={formatPoint(circle.centerSketchPoint.geometry)}, radius={circle.radius})"
-    def formatProfile(prof):
-        ap = prof.areaProperties()
-        return f"Prof(area={ap.area}, center={formatPoint(ap.centroid)})"
-    def formatLine(line):
-        return f"Line(center={get_line_center_tuple(line)}, start={formatPoint(line.startSketchPoint.geometry)}, end={formatPoint(line.endSketchPoint.geometry)})"
-    def debug(*args):
-         logger.write(' '.join(args))
-         logger.write('\n')
+    fileDlg = ui.createFileDialog()
+    fileDlg.isMultiSelectEnabled = False
+    fileDlg.title = "Keyboard Layout Editor  JSON file"
+    fileDlg.filter = "*.json"
+    dlgResult = fileDlg.showOpen()
+    if dlgResult != c.DialogResults.DialogOK:
+        return
+    KLE.from_file(fileDlg.filename)
 
     #################################
     #   panel
@@ -50,7 +33,7 @@ def main(app: adsk.core.Application):
     if not panel_plane:
         panel_plane_sketch = sketches.add(root.xYConstructionPlane)
         panel_plane_input = planes.createInput()
-        solve_intercept = (lambda x1, y1, x2, y2: (x1 * y2 - x2 * y1) / (x1 - x2))
+        solve_intercept = lambda x1, y1, x2, y2: (x1 * y2 - x2 * y1) / (x1 - x2)
         z = solve_intercept(layout.box.p1.y, FRONT_HEIGHT, layout.box.p2.y, REAR_HEIGHT)
         panel_plane_input.setByThreePoints(
             add_point(panel_plane_sketch, Point(0, 0, z)),
@@ -71,12 +54,10 @@ def main(app: adsk.core.Application):
     panel_ext = extrudes.itemByName("panel_ext")
     if not panel_ext:
         ext_input = extrudes.createInput(
-            to_collection(panel_sketch.profiles),
-            f.FeatureOperations.NewBodyFeatureOperation
+            to_collection(panel_sketch.profiles), f.FeatureOperations.NewBodyFeatureOperation
         )
         ext_input.setTwoSidesDistanceExtent(
-            c.ValueInput.createByReal(PANEL_TOP_THICKNESS),
-            c.ValueInput.createByReal(PANEL_BOTTOM_THICKNESS),
+            c.ValueInput.createByReal(PANEL_TOP_THICKNESS), c.ValueInput.createByReal(PANEL_BOTTOM_THICKNESS),
         )
         panel_ext = extrudes.add(ext_input)
         panel_ext.name = "panel_ext"
@@ -94,19 +75,15 @@ def main(app: adsk.core.Application):
         for case in cases:
             wall_sketch.project(case)
         for curves, point in get_offsetters(wall_sketch.profiles):
-            wall_sketch.offset(curves, point, WALL_THICKNESS) 
+            wall_sketch.offset(curves, point, WALL_THICKNESS)
         wall_sketch.name = "wall"
 
     wall_ext = extrudes.itemByName("wall_ext")
     if not wall_ext:
         ext_input = extrudes.createInput(
-            to_collection(sorted_profiles(wall_sketch.profiles)[0:2]),
-            f.FeatureOperations.JoinFeatureOperation,
+            to_collection(sorted_profiles(wall_sketch.profiles)[0:2]), f.FeatureOperations.JoinFeatureOperation,
         )
-        to_entity = f.ToEntityExtentDefinition.create(
-            panel_ext.endFaces[0],
-            False
-        )
+        to_entity = f.ToEntityExtentDefinition.create(panel_ext.endFaces[0], False)
         ext_input.setOneSideExtent(to_entity, f.ExtentDirections.PositiveExtentDirection)
         ext_input.participantBodies = cases
         wall_ext = extrudes.add(ext_input)
@@ -124,13 +101,9 @@ def main(app: adsk.core.Application):
 
     panel_top_ext = extrudes.itemByName("panel_top_ext")
     if not panel_top_ext:
-        to_entity = f.ToEntityExtentDefinition.create(
-            sorted_faces(bodies.itemByName("case_1").faces)[-1],
-            False
-        )
+        to_entity = f.ToEntityExtentDefinition.create(sorted_faces(bodies.itemByName("case_1").faces)[-1], False)
         ext_input = extrudes.createInput(
-            to_collection(panel_top_sketch.profiles),
-            f.FeatureOperations.CutFeatureOperation,
+            to_collection(panel_top_sketch.profiles), f.FeatureOperations.CutFeatureOperation,
         )
         ext_input.setOneSideExtent(to_entity, f.ExtentDirections.PositiveExtentDirection)
         ext_input.participantBodies = cases
@@ -146,13 +119,9 @@ def main(app: adsk.core.Application):
 
     panel_bottom_ext = extrudes.itemByName("panel_bottom_ext")
     if not panel_bottom_ext:
-        to_entity = f.ToEntityExtentDefinition.create(
-            sorted_faces(bodies.itemByName("case_1").faces)[-1],
-            False
-        )
+        to_entity = f.ToEntityExtentDefinition.create(sorted_faces(bodies.itemByName("case_1").faces)[-1], False)
         ext_input = extrudes.createInput(
-            to_collection(panel_bottom_sketch.profiles),
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            to_collection(panel_bottom_sketch.profiles), f.FeatureOperations.CutFeatureOperation,
         )
         ext_input.setOneSideExtent(to_entity, f.ExtentDirections.PositiveExtentDirection)
         ext_input.participantBodies = cases
@@ -167,8 +136,7 @@ def main(app: adsk.core.Application):
         bolt_plane = planes.createInput()
         pla_input = planes.createInput()
         pla_input.setByOffset(
-            root.xYConstructionPlane,
-            c.ValueInput.createByReal(PLATE_GAP + PLATE_THICKNESS + PLATE_BOLT_DIST)
+            root.xYConstructionPlane, c.ValueInput.createByReal(PLATE_RAISE + PLATE_THICKNESS + PLATE_BOLT_DIST)
         )
         bolt_plane = planes.add(pla_input)
         bolt_plane.name = "bolt"
@@ -193,13 +161,12 @@ def main(app: adsk.core.Application):
         for case in cases:
             for e in case.edges:
                 if (
-                    e.startVertex.geometry.z == 0 and
-                    e.endVertex.geometry.z != 0 and
-                    abs(abs(e.startVertex.geometry.x) - abs(layout.box.p1.x)) <= WALL_THICKNESS * 2
+                    e.startVertex.geometry.z == 0
+                    and e.endVertex.geometry.z != 0
+                    and abs(abs(e.startVertex.geometry.x) - abs(layout.box.p1.x)) <= WALL_THICKNESS * 2
                 ):
-                    debug(formatPoint(e.startVertex.geometry))
                     edges.add(e)
-        radius = adsk.core.ValueInput.createByReal(CORNER_RADIUS)
+        radius = c.ValueInput.createByReal(CORNER_RADIUS)
         fillet_input = fillets.createInput()
         fillet_input.addConstantRadiusEdgeSet(edges, radius, True)
         fillet_input.isRollingBallCorner = True
@@ -209,17 +176,14 @@ def main(app: adsk.core.Application):
     bolt_ext = extrudes.itemByName("bolt_ext")
     if not bolt_ext:
         ext_input = extrudes.createInput(
-            to_collection(sorted_profiles(bolt_sketch.profiles)[0:-2]),
-            f.FeatureOperations.JoinFeatureOperation
+            to_collection(sorted_profiles(bolt_sketch.profiles)[0:-2]), f.FeatureOperations.JoinFeatureOperation
         )
         ext_input.setDistanceExtent(
-            False, 
-            c.ValueInput.createByReal(BOLT_HEIGHT),
+            False, c.ValueInput.createByReal(BOLT_HEIGHT),
         )
         ext_input.participantBodies = cases
         bolt_ext = extrudes.add(ext_input)
         bolt_ext.name = "bolt_ext"
-
 
     #################################
     #   plate
@@ -227,7 +191,7 @@ def main(app: adsk.core.Application):
     plate_plane = planes.itemByName("plate")
     if not plate_plane:
         plane_input = planes.createInput()
-        offset = adsk.core.ValueInput.createByReal(PLATE_GAP + PLATE_THICKNESS)
+        offset = c.ValueInput.createByReal(PLATE_RAISE + PLATE_THICKNESS)
         plane_input.setByOffset(root.xYConstructionPlane, offset)
         plate_plane = planes.add(plane_input)
         plate_plane.name = "plate"
@@ -246,8 +210,8 @@ def main(app: adsk.core.Application):
         profs = sorted_profiles(plate_sketch.profiles)
         plate_ext = extrudes.addSimple(
             to_collection(profs[-2:]),
-            adsk.core.ValueInput.createByReal(-PLATE_THICKNESS),
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            c.ValueInput.createByReal(-PLATE_THICKNESS),
+            f.FeatureOperations.NewBodyFeatureOperation,
         )
         plate_ext.name = "plate_ext"
         for index, body in enumerate(sorted_bodies(plate_ext.bodies)):
@@ -272,49 +236,34 @@ def main(app: adsk.core.Application):
 
     plate_screw_ext = extrudes.itemByName("plate_screw_ext")
     if not plate_screw_ext:
-        ext_input = extrudes.createInput(
-            to_collection(screw_sketch.profiles),
-            f.FeatureOperations.CutFeatureOperation,
-        )
+        ext_input = extrudes.createInput(to_collection(screw_sketch.profiles), f.FeatureOperations.CutFeatureOperation,)
         ext_input.setOneSideExtent(
-            f.ToEntityExtentDefinition.create(plate_ext.endFaces[0], False),
-            f.ExtentDirections.NegativeExtentDirection,
+            f.ToEntityExtentDefinition.create(plate_ext.endFaces[0], False), f.ExtentDirections.NegativeExtentDirection,
         )
         ext_input.participantBodies = plates
         plate_screw_ext = extrudes.add(ext_input)
         plate_screw_ext.name = "plate_screw_ext"
-    
+
     bolt_screw_ext = extrudes.itemByName("bolt_screw_ext")
     if not bolt_screw_ext:
         profs = sorted_profiles(screw_sketch.profiles)
-        debug(f"{len(profs)}")
-        profs = profs[-int(len(profs) / 2):]
-        ext_input = extrudes.createInput(
-            to_collection(profs),
-            f.FeatureOperations.CutFeatureOperation,
-        )
+        profs = profs[-int(len(profs) / 2) :]
+        ext_input = extrudes.createInput(to_collection(profs), f.FeatureOperations.CutFeatureOperation,)
         ext_input.setOneSideExtent(
-            f.ToEntityExtentDefinition.create(bolt_ext.endFaces[0], False),
-            f.ExtentDirections.PositiveExtentDirection,
+            f.ToEntityExtentDefinition.create(bolt_ext.endFaces[0], False), f.ExtentDirections.PositiveExtentDirection,
         )
         ext_input.participantBodies = cases
         bolt_screw_ext = extrudes.add(ext_input)
         bolt_screw_ext.name = "bolt_screw_ext"
 
-
     #################################
     #   holders
     #################################
 
-    lines = pick(
-        sorted_lines(plate_sketch.sketchCurves.sketchLines),
-        [-5, -6],
+    lines = pick(sorted_lines(plate_sketch.sketchCurves.sketchLines), [-5, -6],)
+    p1, p2, p3, p4 = sorted_points(
+        [lines[0].startSketchPoint, lines[0].endSketchPoint, lines[1].startSketchPoint, lines[1].endSketchPoint]
     )
-    debug(formatLine(lines[1]))
-    p1, p2, p3, p4 = sorted_points([
-        lines[0].startSketchPoint, lines[0].endSketchPoint,
-        lines[1].startSketchPoint, lines[1].endSketchPoint
-    ])
     v1 = Vector(dx=p1.geometry.x + HOLDER_DIST, dy=p1.geometry.y)
     v2 = Vector(dx=p2.geometry.x - HOLDER_DIST, dy=p2.geometry.y)
     v3 = Vector(dx=p3.geometry.x + HOLDER_DIST, dy=p3.geometry.y)
@@ -335,8 +284,7 @@ def main(app: adsk.core.Application):
     holder_ext = extrudes.itemByName("holder_ext")
     if not holder_ext:
         ext_input = extrudes.createInput(
-            to_collection(sorted_profiles(holder_sketch.profiles)),
-            f.FeatureOperations.JoinFeatureOperation,
+            to_collection(sorted_profiles(holder_sketch.profiles)), f.FeatureOperations.JoinFeatureOperation,
         )
         ext_input.setDistanceExtent(False, c.ValueInput.createByReal(HOLDER_HEIGHT))
         ext_input.participantBodies = plates
@@ -350,10 +298,7 @@ def main(app: adsk.core.Application):
     promicro_plane = planes.itemByName("promicro")
     if not promicro_plane:
         plane_input = planes.createInput()
-        plane_input.setByOffset(
-            plate_plane,
-            adsk.core.ValueInput.createByReal(PROMICRO_Y + PROMICRO_T)
-        )
+        plane_input.setByOffset(plate_plane, c.ValueInput.createByReal(PROMICRO_Y + PROMICRO_T))
         promicro_plane = planes.add(plane_input)
         promicro_plane.name = "promicro"
 
@@ -371,8 +316,8 @@ def main(app: adsk.core.Application):
     if not promicro_ext:
         promicro_ext = extrudes.addSimple(
             to_collection(promicro_sketch.profiles),
-            adsk.core.ValueInput.createByReal(-PROMICRO_T),
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            c.ValueInput.createByReal(-PROMICRO_T),
+            f.FeatureOperations.NewBodyFeatureOperation,
         )
         promicro_ext.name = "promicro_ext"
         for index, body in enumerate(sorted_bodies(promicro_ext.bodies)):
@@ -389,14 +334,12 @@ def main(app: adsk.core.Application):
         for index, body in enumerate(sorted_bodies(usb_ext1.bodies)):
             body.name = f"usb_{index + 1}"
 
-    usbs = [b for b in bodies if b.name.startswith('usb')]
+    usbs = [b for b in bodies if b.name.startswith("usb")]
 
     usb_ext2 = extrudes.itemByName("usb_ext2")
     if not usb_ext2:
         ext_input = extrudes.createInput(
-            to_collection(sorted_faces(
-                usb_ext1.bodies[0].faces)[-2:] + sorted_faces(usb_ext1.bodies[1].faces)[-2:]
-            ),
+            to_collection(sorted_faces(usb_ext1.bodies[0].faces)[-2:] + sorted_faces(usb_ext1.bodies[1].faces)[-2:]),
             f.FeatureOperations.JoinFeatureOperation,
         )
         ext_input.setDistanceExtent(False, c.ValueInput.createByReal(-USB_H))
@@ -422,8 +365,8 @@ def main(app: adsk.core.Application):
     if not trrs_ext1:
         trrs_ext1 = extrudes.addSimple(
             to_collection(sorted_profiles(trrs_sketch.profiles)[0:2]),
-            adsk.core.ValueInput.createByReal(-TRRS_T),
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            c.ValueInput.createByReal(-TRRS_T),
+            f.FeatureOperations.NewBodyFeatureOperation,
         )
         trrs_ext1.name = "trrs_ext1"
         for index, body in enumerate(sorted_bodies(trrs_ext1.bodies)):
@@ -445,8 +388,7 @@ def main(app: adsk.core.Application):
         trrs_sock_ext = extrudes.itemByName(f"trrs{n}_sock_ext")
         if not trrs_sock_ext:
             ext_input = extrudes.createInput(
-                sorted_profiles(trrs_sock_sketch.profiles)[-1],
-                adsk.fusion.FeatureOperations.JoinFeatureOperation,
+                sorted_profiles(trrs_sock_sketch.profiles)[-1], f.FeatureOperations.JoinFeatureOperation,
             )
             ext_input.setDistanceExtent(False, c.ValueInput.createByReal(TRRS_L))
             ext_input.participantBodies = trrses

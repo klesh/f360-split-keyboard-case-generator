@@ -142,10 +142,6 @@ def rxry_to_xyxy(rx, ry, w, h):
 def fold_points_y(points: List[Point]):
     return points + [p.mirror_y() for p in reversed(points)]
 
-def find(function, iterable):
-    for i in iterable:
-        if function(i):
-            return i
 
 def offset_points(points, dx):
     result = [points[0].translate(Vector(dx=dx))]
