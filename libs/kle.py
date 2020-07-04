@@ -9,7 +9,7 @@ hole_1u = Polygon(
         Point(-x, +y),
         Point(+x, -y),
     ],
-    box=Box(
+    rect=Rect(
         Point(-x, +y + 0.5*MM),
         Point(+x, -y - 0.5*MM),
     )
@@ -40,7 +40,7 @@ hole_2u = Polygon(
         Point(+x, stb_y2 + 3*MM),       # canal bl
         Point(+x, -y),                  # key hole br
     ]),
-    box=Box(
+    rect=Rect(
         Point(-noh_x2, +y + 0.5*MM),
         Point(+noh_x2, -y - 3.3*MM),
     )
@@ -67,31 +67,31 @@ def from_json(data: dict) -> Layout:
             if ux:
                 x += x * U
             w, h = uw * U, uh * U
-            box = Box(Point(x, y), Point(x + w, y - h))
+            rect = Rect(Point(x, y), Point(x + w, y - h))
             k = Key(
                 text=key,
-                box=box,
-                hole=(hole_1u if uw < 2 else hole_2u).translate(Vector(box.rx, box.ry))
+                rect=rect,
+                hole=(hole_1u if uw < 2 else hole_2u).translate(Vector(rect.rx, rect.ry))
             )
             keys.append(k)
             u = {}
             x += w
             if (rn, cn) in SPLIT_KEYS:
-                splitter.append(box.tr)
-                splitter.append(box.br)
+                splitter.append(rect.tr)
+                splitter.append(rect.br)
             cn += 1
         y -= h
         rn += 1
-    box = Box(Point(0, 0), Point(x, y)).offset(3*MM)
+    rect = Rect(Point(0, 0), Point(x, y)).offset(PANEL_PADDING)
     if splitter:
-        splitter[0] = Point(splitter[0].x, box.p1.y) 
-        splitter[-1] = Point(splitter[-1].x, box.p2.y)
+        splitter[0] = Point(splitter[0].x, rect.p1.y) 
+        splitter[-1] = Point(splitter[-1].x, rect.p2.y)
     dx = SPLIT_GAP / 2
-    l = Polygon([box.tl, *offset_points(splitter, -dx), box.bl])
-    r = Polygon([box.tr, *offset_points(splitter, +dx), box.br])
+    l = Polygon([rect.tl, *offset_points(splitter, -dx), rect.bl])
+    r = Polygon([rect.tr, *offset_points(splitter, +dx), rect.br])
     return Layout(
         keys=keys,
-        box=box,
+        rect=rect,
         left=l,
         right=r,
         name=meta.get('name'),

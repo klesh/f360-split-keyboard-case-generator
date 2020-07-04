@@ -26,10 +26,10 @@ def get_promicro_holder():
         bottom_clamp.translate(Vector(dy=-y))
     ]
 
-def get_promicro_boxes():
+def get_promicro_rects():
     x1, x2 = PROMICRO_W / 2, USB_W / 2
     y = WALL_THICKNESS - USB_L + PLATE_GAP
     return (
-        Box(Point(-x1, y), Point(x1, y - PROMICRO_H)),
-        Box(Point(-x2, y), Point(x2, y - USB_L)),
+        Rect(Point(-x1, y), Point(x1, y - PROMICRO_H)),
+        Rect(Point(-x2, y), Point(x2, y - USB_L)),
     )
