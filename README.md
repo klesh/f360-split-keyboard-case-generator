@@ -30,4 +30,4 @@ Fusion 360 script that generates a set of 3-D printable split keyboard cases bas
 3. Fire up Fusion 360 and press `Shift + s` to bring up "Script and Add-Ins" dialog
 4. Double click the script and select your downloaded json file
 5. Wait for a while...
-
+6. Checkout `lib/config.py` if you need to change some parameters
