@@ -63,9 +63,9 @@ def from_json(data: dict) -> Layout:
             if isinstance(key, dict):
                 u = key
                 continue
-            uw, uh, ux, uy = u.get('w', 1), u.get('h', 1), u.get('ux', 0), u.get('uy', 0)
-            if ux:
-                x += x * U
+            uw, uh, ux, uy = u.get('w', 1), u.get('h', 1), u.get('x', 0), u.get('y', 0)
+            x += ux * U
+            y += uy * U
             w, h = uw * U, uh * U
             rect = Rect(Point(x, y), Point(x + w, y - h))
             k = Key(
@@ -100,6 +100,6 @@ def from_json(data: dict) -> Layout:
 
 
 def from_file(file_path: str) -> Layout:
-    with open(file_path) as f:
+    with open(file_path, encoding="utf-8") as f:
         return from_json(json.load(f))
 

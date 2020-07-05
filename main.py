@@ -10,16 +10,15 @@ def main(app: Application):
 
     ui = app.userInterface
 
-    # fileDlg = ui.createFileDialog()
-    # fileDlg.isMultiSelectEnabled = False
-    # fileDlg.title = "Keyboard Layout Editor  JSON file"
-    # fileDlg.filter = "*.json"
-    # dlgResult = fileDlg.showOpen()
-    # if dlgResult != DialogResults.DialogOK:
-    #     return
-
-    # layout = kle.from_file(fileDlg.filename)
-    layout = kle.from_file(r"C:\Users\Klesh\Desktop\ks63\ks-63.json")
+    fileDlg = ui.createFileDialog()
+    fileDlg.isMultiSelectEnabled = False
+    fileDlg.title = "Keyboard Layout Editor  JSON file"
+    fileDlg.filter = "*.json"
+    dlgResult = fileDlg.showOpen()
+    if dlgResult != DialogResults.DialogOK:
+        return
+    layout = kle.from_file(fileDlg.filename)
+    # layout = kle.from_file(r"C:\Users\Klesh\Desktop\ks63\ks-63.json")
     root = ComponentHelper(app.activeProduct.rootComponent)
 
     #################################
@@ -61,8 +60,7 @@ def main(app: Application):
         panel_ext.name = "panel_ext"
 
     cases = [b for b in root.bodies if b.name.startswith("case")]
-    case = BodyHelper(cases[0])
-    top_face = case.closest_face(Vector(0, 0, 1))
+    
 
     #################################
     #   wall
@@ -80,7 +78,7 @@ def main(app: Application):
         wall_ext = root.add_one_side_extrude(
             wall_sketch.sorted_profiles[0:2],
             FeatureOperations.JoinFeatureOperation,
-            to_entity=top_face,
+            to_entity=BodyHelper(cases[0]).closest_face(Vector(0, 0, 1)),
             bodies=cases,
         )
         wall_ext.name = "wall_ext"
@@ -101,7 +99,7 @@ def main(app: Application):
         panel_top_ext = root.add_one_side_extrude(
             panel_top_sketch.profiles,
             FeatureOperations.CutFeatureOperation,
-            to_entity=top_face,
+            to_entity=BodyHelper(cases[0]).closest_face(Vector(0, 0, 1)),
             bodies=cases
         )
         panel_top_ext.name = "panel_top_ext"
@@ -152,7 +150,7 @@ def main(app: Application):
         bolt_ext = root.add_one_side_extrude(
             sorted(bolt_sketch.profiles, key=lambda p: p.areaProperties().area)[:-2],
             FeatureOperations.JoinFeatureOperation,
-            to_entity=top_face,
+            to_entity=BodyHelper(cases[0]).closest_face(Vector(0, 0, 1)),
             bodies=cases
         )
         bolt_ext.name = "bolt_ext"
@@ -230,7 +228,7 @@ def main(app: Application):
         bolt_screw_ext = root.add_one_side_extrude(
             profs[4:8] + profs[12:],
             FeatureOperations.CutFeatureOperation,
-            to_entity=top_face,
+            to_entity=BodyHelper(cases[0]).closest_face(Vector(0, 0, 1)),
             offset=-WALL_THICKNESS,
             bodies=cases
         )
