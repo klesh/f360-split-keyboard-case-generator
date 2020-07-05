@@ -12,7 +12,7 @@ Fusion 360 script that generates a set of 3-D printable split keyboard cases bas
 
 ## Output
 
-![result](example/ks63.jpg)
+![result](example/ks63-f360.jpg)
 
 
 # Installation
